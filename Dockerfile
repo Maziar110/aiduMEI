@@ -40,7 +40,12 @@ EXPOSE 8767
 # 需要对外暴露时，请通过 docker run -e AIDUMEM_HOST=0.0.0.0 覆盖，
 # 并务必同时设置 AIDUMEM_API_TOKEN 与 AIDUMEM_UI_PASSWORD，前置 TLS 反代。
 ENV AIDUMEM_HOST="127.0.0.1"
-ENV AIDUMEM_API_PORT="8767"
+
+# ★ 这里**不设** AIDUMEM_API_PORT。镜像里设了它，`docker run` 传进来的
+#   `PORT` 就永远轮不到 —— 端口链是 AIDUMEM_API_PORT → MEM0_API_PORT → PORT，
+#   镜像 ENV 让第一环恒非空，容器 PaaS 那一环成了死代码。
+#   不设的默认值仍是 8767（api_server.main() 的默认），`docker run` 行为不变；
+#   docker-compose.yml 里那条显式的 AIDUMEM_API_PORT=8767 也照旧生效。
 
 # ★ v20.2.5（外审 F-01）：**显式交接运行目录**。
 #
