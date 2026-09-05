@@ -26,12 +26,23 @@ RUN pip install --no-cache-dir .
 RUN groupadd --gid 10001 aidumem \
  && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin aidumem \
  && mkdir -p /app/data /app/logs \
- && chown -R aidumem:aidumem /app/data /app/logs
+ && chown -R aidumem:0 /app/data /app/logs \
+ && chmod -R g=u /app/data /app/logs
 
 # ★ 只交接 data/ 与 logs/，**不** chown 整个 /app：
 #   代码目录保持 root 属主、进程只读，等于免费拿到「运行期改不了自己代码」。
 #   代价是 __pycache__ 写不进 —— 只是每次启动多花几百毫秒重新编译字节码，
 #   不影响功能（Python 写不进 pycache 时静默降级，不报错）。
+#
+# ★ 组给 0、并给组写权限，不是随手放宽 —— 容器 PaaS（Kubernetes 的
+#   runAsUser、OpenShift、Dockhold 等托管平台）**不理会镜像里的 USER**，
+#   而是分配一个事先不知道的 uid 把进程跑起来，惯例是把它放进 gid 0。
+#   目录若是 10001:10001 0755，那个 uid 就只读，症状是启动时
+#   `sqlite3.OperationalError: unable to open database file`，
+#   且抛在 **import 期**（ducky/salience/__init__.py 建表），
+#   日志还没起来，看不出是权限问题。
+#   本机复现：docker run --user 12345:0 <image> python -c "import ducky"
+#   上面那条取舍不受影响：uid 仍是 10001，/app 仍是 root 属主。
 USER aidumem
 
 EXPOSE 8767
