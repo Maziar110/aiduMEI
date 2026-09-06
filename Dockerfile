@@ -76,4 +76,17 @@ ENV AIDUMEM_DATA_DIR="/app/data"
 ENV AIDUMEM_LOG_DIR="/app/logs"
 ENV AIDUMEM_CONFIG_FILE="/app/mem0_config_local.json"
 
+# ★ HOME 必须指向一个**可写**目录（与 deploy/aidumem-api.service 的
+#   `StateDirectory` + `Environment=HOME=` 是同一件事，那边已经修过）。
+#   `useradd --no-create-home` 之后 $HOME 指向不存在的 /home/aidumem，
+#   而 mem0 SDK 在 import 期就要往 $HOME 下写缓存。缺这一行的表现，
+#   与生产上那次一模一样：**带着绿灯失能** ——
+#       /health   → status=ok
+#       但 degraded 里有 vector_backend，向量检索静默零召回
+#       日志里只有一行 `mem0 SDK 加载失败: [Errno 13] Permission denied`
+#   容器上还多一种走法：托管平台换了 uid 时 $HOME 变成 /，报的是 '/.mem0'。
+#   本机复现：docker run <image> python -c "import mem0"
+
+ENV HOME="/app/data"
+
 CMD ["aidumem"]
